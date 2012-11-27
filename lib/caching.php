@@ -6,12 +6,12 @@ class PL_Cache {
 	const TTL_LOW  = 900; // 15 minutes
 	const TTL_HIGH = 172800; // 48 hours
 
-	public static $offset = 0;
+	// public static $offset = 3;
 	public $type = 'general';
 	public $transient_id = false;
 
 	function __construct ($type = 'general') {
-		$this->offset = get_option('pls_cache_offset', 0);
+		// self::$offset = get_option('pls_cache_offset', 0);
 		$this->type = $type;
 	}
 
@@ -32,7 +32,7 @@ class PL_Cache {
 
 	}
 
-	function get () {
+	public function get () {
 
 		// Just ignore caching for admins and regular folk too!
 		if(is_admin() || is_admin_bar_showing() || is_user_logged_in()) {
@@ -44,9 +44,11 @@ class PL_Cache {
 			return false;
 		}
 	
+		// Build entry key
 		$func_args = func_get_args();
 		$arg_hash = rawToShortMD5(MD5_85_ALPHABET, md5(http_build_query( $func_args ), true));
 		$this->transient_id = 'pl_' . $this->type . $this->offset . '_' . $arg_hash;
+        
         $transient = get_transient($this->transient_id);
         if ($transient) {
         	return $transient;
@@ -59,27 +61,26 @@ class PL_Cache {
 		// Don't save any content from logged in users
 		// We were getting things like "log out" links cached
 		if ($this->transient_id && !is_user_logged_in()) {
-			set_transient($this->transient_id, $result , $duration);
+			set_transient($this->transient_id, $result, $duration);
 		}
+
+
 	}
 
 	public static function items() {
-		global $wpdb;
-	    $placester_options = $wpdb->get_results('SELECT * FROM ' . $wpdb->prefix . 'options ' ."WHERE option_name LIKE '_transient_pl_%'", ARRAY_A);		
-	    if ($placester_options && is_array($placester_options)) {
-	    	return $placester_options;
-	    } else {
-	    	return false;
-	    }
+		// global $wpdb;
+		// $placester_options = $wpdb->get_results('SELECT * FROM ' . $wpdb->prefix . 'options ' ."WHERE option_name LIKE '_transient_pl_%'", ARRAY_A);		
+		// if ($placester_options && is_array($placester_options)) {
+		// 	return $placester_options;
+		// } else {
+		// 	return false;
+		// }
 	}
 
 	public static function clear() {
 		global $wpdb;
 	    
-	    $placester_options = $wpdb->get_results('SELECT option_name FROM ' . $wpdb->prefix . 'options ' ."WHERE option_name LIKE '_transient_pl_%'");
-	    foreach ($placester_options as $option) {
-	        delete_option( $option->option_name );
-	    }
+	    // TODO: Delete all site transients (i.e., all site fragment/object cache groups...)
 	    
 	    $saved_searches = $wpdb->get_results('SELECT option_name FROM ' . $wpdb->prefix . 'options ' ."WHERE option_name LIKE 'pls_ss_%'");
 	    foreach ($saved_searches as $option) {
@@ -100,12 +101,15 @@ class PL_Cache {
 	}
 
 	public static function invalidate() {
-		$cache = new self();
-		$cache->offset += 1;
-		if($cache->offset > 99) {
-			$cache->offset = 0;
-		}
-		update_option('pls_cache_offset', $cache->offset);
+
+
+		// $cache = new self();
+		// error_log('INVALIDATE $this->offset == ' . $cache->offset);
+		// $cache->offset += 1;
+		// if($cache->offset > 99) {
+		// 	$cache->offset = 0;
+		// }
+		// update_option('pls_cache_offset', $cache->offset);
 	}
 
 //end class

@@ -4,15 +4,16 @@ PL_Cache::init();
 class PL_Cache {
 
 	const TTL_LOW  = 900; // 15 minutes
+	const TTL_MED = 86400; // 24 hours
 	const TTL_HIGH = 172800; // 48 hours
 
 	// public static $offset = 3;
-	public $type = 'general';
+	public $group = 'general';
 	public $transient_id = false;
 
-	function __construct ($type = 'general') {
+	function __construct ($group = 'general') {
 		// self::$offset = get_option('pls_cache_offset', 0);
-		$this->type = $type;
+		$this->group = $group;
 	}
 
 	public static function init () {
@@ -47,7 +48,7 @@ class PL_Cache {
 		// Build entry key
 		$func_args = func_get_args();
 		$arg_hash = rawToShortMD5(MD5_85_ALPHABET, md5(http_build_query( $func_args ), true));
-		$this->transient_id = 'pl_' . $this->type . $this->offset . '_' . $arg_hash;
+		$this->transient_id = 'pl_' . $this->group . /* $this->offset . */ '_' . $arg_hash;
         
         $transient = get_transient($this->transient_id);
         if ($transient) {
@@ -57,7 +58,7 @@ class PL_Cache {
         }
 	}
 
-	public function save ($result, $duration = 172800) {
+	public function save ($result, $duration = 172800, $unique_id = false) {
 		// Don't save any content from logged in users
 		// We were getting things like "log out" links cached
 		if ($this->transient_id && !is_user_logged_in()) {
@@ -67,7 +68,7 @@ class PL_Cache {
 
 	}
 
-	public static function items() {
+	public static function items ( $group = 'general') {
 		// global $wpdb;
 		// $placester_options = $wpdb->get_results('SELECT * FROM ' . $wpdb->prefix . 'options ' ."WHERE option_name LIKE '_transient_pl_%'", ARRAY_A);		
 		// if ($placester_options && is_array($placester_options)) {
@@ -81,11 +82,6 @@ class PL_Cache {
 		global $wpdb;
 	    
 	    // TODO: Delete all site transients (i.e., all site fragment/object cache groups...)
-	    
-	    $saved_searches = $wpdb->get_results('SELECT option_name FROM ' . $wpdb->prefix . 'options ' ."WHERE option_name LIKE 'pls_ss_%'");
-	    foreach ($saved_searches as $option) {
-	        delete_option( $option->option_name );
-	    }
 	}
 
 	public static function ajax_clear() {
@@ -101,8 +97,8 @@ class PL_Cache {
 	}
 
 	public static function invalidate() {
-
-
+		
+		
 		// $cache = new self();
 		// error_log('INVALIDATE $this->offset == ' . $cache->offset);
 		// $cache->offset += 1;

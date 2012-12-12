@@ -25,12 +25,33 @@ class PL_Cache {
 			self::invalidate();
 		}
 
-		add_action('wp_ajax_user_empty_cache', array(__CLASS__, 'ajax_clear' ) );
-		add_action('switch_theme', array(__CLASS__, 'invalidate'));
-		// flush cache when posts are trashed or untrashed -pek
-		add_action('wp_trash_post', array(__CLASS__, 'invalidate'));
-		add_action('untrash_post', array(__CLASS__, 'invalidate'));
+		// This is VITAL for caching to work properly...
+		error_log('Here...');
+		add_action( 'w3tc_register_fragment_groups', array(__CLASS__, 'register_fragment_groups') );
 
+		add_action( 'wp_ajax_user_empty_cache', array(__CLASS__, 'ajax_clear') );
+		add_action( 'switch_theme', array(__CLASS__, 'invalidate'));
+		// flush cache when posts are trashed or untrashed -pek
+		add_action( 'wp_trash_post', array(__CLASS__, 'invalidate'));
+		add_action( 'untrash_post', array(__CLASS__, 'invalidate'));
+
+	}
+
+	// Register the fragment cache groups we will use for object caching...
+	public static function register_fragment_groups() {
+		// error_log('In register_fragment_groups()');
+		$blog_groups = array();
+		$network_groups = array();
+
+		// Blog specific group and an array of actions that will trigger a flush of the group
+		foreach ( $blog_groups as $group => $actions_arr ) {
+			w3tc_register_fragment_group('pl_{$group}_', $actions_arr);
+		}
+
+		//If using MultiSite Network/site wide specific group and an array of actions that will trigger a flush of the group
+		foreach ( $network_groups as $group => $actions_arr ) {
+			w3tc_register_fragment_group_global('{$group}_network_', $actions_arr);
+		}
 	}
 
 	public function get () {
@@ -48,7 +69,7 @@ class PL_Cache {
 		// Build entry key
 		$func_args = func_get_args();
 		$arg_hash = rawToShortMD5(MD5_85_ALPHABET, md5(http_build_query( $func_args ), true));
-		$this->transient_id = 'pl_' . $this->group . /* $this->offset . */ '_' . $arg_hash;
+		$this->transient_id = $this->group . /* $this->offset . */ '_' . $arg_hash;
         
         $transient = get_transient($this->transient_id);
         if ($transient) {
@@ -68,7 +89,7 @@ class PL_Cache {
 
 	}
 
-	public static function items ( $group = 'general') {
+	public static function items ( $group = 'general' ) {
 		// global $wpdb;
 		// $placester_options = $wpdb->get_results('SELECT * FROM ' . $wpdb->prefix . 'options ' ."WHERE option_name LIKE '_transient_pl_%'", ARRAY_A);		
 		// if ($placester_options && is_array($placester_options)) {
@@ -78,10 +99,14 @@ class PL_Cache {
 		// }
 	}
 
-	public static function clear() {
-		global $wpdb;
-	    
+	public static function clear( $group = 'general' ) {
 	    // TODO: Delete all site transients (i.e., all site fragment/object cache groups...)
+	
+		//manually flush a blog specific group.
+		w3tc_fragmentcache_flush_group('my_plugin_');
+
+		//manually flush a network wide group
+		w3tc_fragmentcache_flush_group('my_plugin_global_', true);
 	}
 
 	public static function ajax_clear() {
@@ -96,16 +121,9 @@ class PL_Cache {
 		return $result;
 	}
 
+	// Clear ALL blog cache groups...
 	public static function invalidate() {
-		
-		
-		// $cache = new self();
-		// error_log('INVALIDATE $this->offset == ' . $cache->offset);
-		// $cache->offset += 1;
-		// if($cache->offset > 99) {
-		// 	$cache->offset = 0;
-		// }
-		// update_option('pls_cache_offset', $cache->offset);
+
 	}
 
 //end class

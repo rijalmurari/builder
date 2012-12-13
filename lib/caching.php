@@ -7,6 +7,9 @@ class PL_Cache {
 	const TTL_MED = 86400; // 24 hours
 	const TTL_HIGH = 172800; // 48 hours
 
+	const KEY_PREFIX = 'PL_';
+	private static $logging_enabled = true; // Set to FALSE eventually...
+
 	// public static $offset = 3;
 	public $group = 'general';
 	public $transient_id = false;
@@ -16,8 +19,14 @@ class PL_Cache {
 		$this->group = $group;
 	}
 
-	public static function init () {
+	private static function cache_log ($msg) {
+		if ( !empty($msg) && self::$logging_enabled ) {
+			$msg .= "\n";
+			error_log($msg, 3, "/Users/iantendick/dev/wp_cache.log");
+		}
+	}
 
+	public static function init () {
 		// Allow cache to be cleared by going to url like http://example.com/?clear_cache
 		if(isset($_GET['clear_cache']) || isset($_POST['clear_cache'])) {
 			// style-util.php calls its PLS_Style::init() immediately
@@ -26,7 +35,6 @@ class PL_Cache {
 		}
 
 		// This is VITAL for caching to work properly...
-		error_log('Here...');
 		add_action( 'w3tc_register_fragment_groups', array(__CLASS__, 'register_fragment_groups') );
 
 		add_action( 'wp_ajax_user_empty_cache', array(__CLASS__, 'ajax_clear') );
@@ -39,7 +47,6 @@ class PL_Cache {
 
 	// Register the fragment cache groups we will use for object caching...
 	public static function register_fragment_groups() {
-		// error_log('In register_fragment_groups()');
 		$blog_groups = array();
 		$network_groups = array();
 
@@ -55,61 +62,78 @@ class PL_Cache {
 	}
 
 	public function get () {
+		self::cache_log('Trying to "get" cached value...');
 
 		// Just ignore caching for admins and regular folk too!
 		if(is_admin() || is_admin_bar_showing() || is_user_logged_in()) {
+			self::cache_log('Ignoring caching...');
 			return false;
 		}
 
 		// Backdoor to ignore the cache completely
 		if(isset($_GET['no_cache']) || isset($_POST['no_cache'])) {
+			self::cache_log('Backdoor ignore caching...');
 			return false;
 		}
 	
 		// Build entry key
+		self::cache_log('Building cache entry key...');
+		
 		$func_args = func_get_args();
+		self::cache_log('func_args: ' . serialize($func_args));
+		
 		$arg_hash = rawToShortMD5(MD5_85_ALPHABET, md5(http_build_query( $func_args ), true));
-		$this->transient_id = $this->group . /* $this->offset . */ '_' . $arg_hash;
-        
+		self::cache_log('arg_hash: ' . $arg_hash);
+		
+		$this->transient_id = self::KEY_PREFIX . $this->group . /* $this->offset . */ '_' . $arg_hash;
+        self::cache_log('transient_id: '. $this->transient_id);
+
         $transient = get_transient($this->transient_id);
         if ($transient) {
+        	self::cache_log('CACHE HIT!');
+        	self::cache_log('Returning: ' . $transient);
         	return $transient;
         } else {
+        	self::cache_log('CACHE MISS');
         	return false;
         }
 	}
 
-	public function save ($result, $duration = 172800, $unique_id = false) {
+	public function save ($result, $duration = self::TTL_HIGH, $unique_id = false) {
+		self::cache_log('Attempting to save entry to cache...');
+		self::cache_log('Key: ' . $this->transient_id);
+		self::cache_log('Value: ' . $result);
+		self::cache_log('TTL: ' . $duration);
+		self::cache_log('Is user logged in: ' . is_user_logged_in());
+
 		// Don't save any content from logged in users
 		// We were getting things like "log out" links cached
 		if ($this->transient_id && !is_user_logged_in()) {
-			set_transient($this->transient_id, $result, $duration);
+			self::cache_log('Would have saved/cached entry!');
+			// set_transient($this->transient_id, $result, $duration);
 		}
-
-
+		else {
+			self::cache_log('NOT saving/caching entry...');
+		}
 	}
 
 	public static function items ( $group = 'general' ) {
-		// global $wpdb;
-		// $placester_options = $wpdb->get_results('SELECT * FROM ' . $wpdb->prefix . 'options ' ."WHERE option_name LIKE '_transient_pl_%'", ARRAY_A);		
-		// if ($placester_options && is_array($placester_options)) {
-		// 	return $placester_options;
-		// } else {
-		// 	return false;
-		// }
+		// TODO: Retrieve items based on group...this might NOT be possible, so this function make be removed
 	}
 
 	public static function clear( $group = 'general' ) {
+	    error_log('Attempting to clear cache...');
 	    // TODO: Delete all site transients (i.e., all site fragment/object cache groups...)
 	
 		//manually flush a blog specific group.
-		w3tc_fragmentcache_flush_group('my_plugin_');
+		// w3tc_fragmentcache_flush_group('my_plugin_');
 
 		//manually flush a network wide group
-		w3tc_fragmentcache_flush_group('my_plugin_global_', true);
+		// w3tc_fragmentcache_flush_group('my_plugin_global_', true);
 	}
 
 	public static function ajax_clear() {
+		self::cache_log('AJAX clear cache...');
 		self::clear();
 		echo json_encode(array('result' => true, 'message' => 'You\'ve successfully cleared your cache'));
 		die();

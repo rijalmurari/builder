@@ -21,6 +21,7 @@ class PL_Cache {
 
 	private static function cache_log ($msg) {
 		if ( !empty($msg) && self::$logging_enabled ) {
+			$msg = '[' . date("M-d-Y g:i A T") . '] ' . $msg; 
 			$msg .= "\n";
 			error_log($msg, 3, "/Users/iantendick/dev/wp_cache.log");
 		}

@@ -16,7 +16,7 @@ class PL_Cache {
 
 	function __construct ($group = 'general') {
 		// self::$offset = get_option('pls_cache_offset', 0);
-		$this->group = $group;
+		$this->group = preg_replace( "/\W/", "_", strtolower( $group ) );
 	}
 
 	private static function cache_log ($msg) {
@@ -102,7 +102,8 @@ class PL_Cache {
 	public function save ($result, $duration = self::TTL_HIGH, $unique_id = false) {
 		self::cache_log('Attempting to save entry to cache...');
 		self::cache_log('Key: ' . $this->transient_id);
-		self::cache_log('Value: ' . $result);
+		$entry = is_array($result) ? serialize($result) : $result;
+		self::cache_log('Value: ' . $entry);
 		self::cache_log('TTL: ' . $duration);
 		self::cache_log('Is user logged in: ' . is_user_logged_in());
 

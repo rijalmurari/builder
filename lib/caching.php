@@ -21,9 +21,18 @@ class PL_Cache {
 
 	private static function cache_log ($msg) {
 		if ( !empty($msg) && self::$logging_enabled ) {
-			$msg = '[' . date("M-d-Y g:i A T") . '] ' . $msg; 
-			$msg .= "\n";
+			$msg = '[' . date("M-d-Y g:i A T") . '] ' . $msg . "\n";
 			error_log($msg, 3, "/Users/iantendick/dev/wp_cache.log");
+		}
+	}
+
+	private static function log_trace ($trace) {
+		// Print the file, the function in that file, and the specific line where the given caching call 
+		// is being made from to the cache log...
+		if ( isset($trace[1]) ) {
+			$file = str_replace('/Users/iantendick/Dev/wordpress/', '', @$trace[1]['file']);
+			$caller = $file . ', ' . @$trace[2]['function'] . ', ' . @$trace[1]['line'];
+			self::cache_log('Caller: ' . $caller);
 		}
 	}
 
@@ -63,11 +72,14 @@ class PL_Cache {
 	}
 
 	public function get () {
-		self::cache_log('Trying to "get" cached value...');
+		self::cache_log('================================');
+		self::cache_log('GET cached value...');
 
-		// Just ignore caching for admins and regular folk too!
-		if(is_admin() || is_admin_bar_showing() || is_user_logged_in()) {
-			self::cache_log('Ignoring caching...');
+		self::log_trace(debug_backtrace());
+
+		// Just ignore caching for authenticated users... (this WILL change!)
+		if( is_user_logged_in() ) {
+			self::cache_log('Circumventing caching...');
 			return false;
 		}
 
@@ -78,7 +90,7 @@ class PL_Cache {
 		}
 	
 		// Build entry key
-		self::cache_log('Building cache entry key...');
+		self::cache_log('group: ' . $this->group);
 		
 		$func_args = func_get_args();
 		self::cache_log('func_args: ' . serialize($func_args));
@@ -101,17 +113,22 @@ class PL_Cache {
 	}
 
 	public function save ($result, $duration = self::TTL_HIGH, $unique_id = false) {
-		self::cache_log('Attempting to save entry to cache...');
+		self::cache_log('================================');
+		self::cache_log('SAVE entry to cache...');
+		
+		self::log_trace(debug_backtrace());
+
 		self::cache_log('Key: ' . $this->transient_id);
-		$entry = is_array($result) ? serialize($result) : $result;
-		self::cache_log('Value: ' . $entry);
+		// $entry = is_array($result) ? serialize($result) : $result;
+		// self::cache_log('Value: ' . $entry);
 		self::cache_log('TTL: ' . $duration);
-		self::cache_log('Is user logged in: ' . is_user_logged_in());
+		self::cache_log('Is user logged in: ' . ( is_user_logged_in() ? 'YES' : 'NO' ) );
 
 		// Don't save any content from logged in users
 		// We were getting things like "log out" links cached
 		if ($this->transient_id && !is_user_logged_in()) {
 			self::cache_log('Would have saved/cached entry!');
+			// self::cache_log('ENTRY CACHED!');
 			// set_transient($this->transient_id, $result, $duration);
 		}
 		else {
@@ -142,6 +159,8 @@ class PL_Cache {
 	}
 
 	public static function delete($option_name) {
+		self::cache_log('================================');
+		self::cache_log('Delete cache entry: ' . $option_name);
 		$option_name = str_replace('_transient_', '', $option_name);
 		$result = delete_transient( $option_name );
 		return $result;

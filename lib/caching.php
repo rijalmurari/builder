@@ -137,7 +137,7 @@ class PL_Cache {
 	}
 
 	public static function items ( $group = 'general' ) {
-		// TODO: Retrieve items based on group...this might NOT be possible, so this function make be removed
+		// TODO: Retrieve items based on group--this might NOT be possible, so this function may be removed...
 	}
 
 	public static function clear( $group = 'general' ) {
@@ -168,7 +168,8 @@ class PL_Cache {
 
 	// Clear ALL blog cache groups...
 	public static function invalidate() {
-
+		// TODO: Need to flush ONLY site groups...
+		
 	}
 
 //end class

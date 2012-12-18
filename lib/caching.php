@@ -14,7 +14,7 @@ class PL_Cache {
 	public $group = 'general';
 	public $transient_id = false;
 
-	function __construct ($group = 'general') {
+	function __construct ($group = null) {
 		// self::$offset = get_option('pls_cache_offset', 0);
 		$this->group = preg_replace( "/\W/", "_", strtolower( $group ) );
 	}
@@ -92,6 +92,7 @@ class PL_Cache {
 		// Build entry key
 		self::cache_log('group: ' . $this->group);
 		
+		// The args act as the value's unique ID
 		$func_args = func_get_args();
 		self::cache_log('func_args: ' . serialize($func_args));
 		
@@ -112,7 +113,7 @@ class PL_Cache {
         }
 	}
 
-	public function save ($result, $duration = self::TTL_HIGH, $unique_id = false) {
+	public function save ($result, $duration = self::TTL_HIGH, $unique_id = null) {
 		self::cache_log('================================');
 		self::cache_log('SAVE entry to cache...');
 		
@@ -136,12 +137,13 @@ class PL_Cache {
 		}
 	}
 
-	public static function items ( $group = 'general' ) {
+	public static function items ( $group = null ) {
 		// TODO: Retrieve items based on group--this might NOT be possible, so this function may be removed...
 	}
 
-	public static function clear( $group = 'general' ) {
+	public static function clear( $group = null ) {
 	    error_log('Attempting to clear cache...');
+	    self::cache_log('CLEAR CACHE');
 	    // TODO: Delete all site transients (i.e., all site fragment/object cache groups...)
 	
 		//manually flush a blog specific group.
@@ -169,7 +171,7 @@ class PL_Cache {
 	// Clear ALL blog cache groups...
 	public static function invalidate() {
 		// TODO: Need to flush ONLY site groups...
-		
+
 	}
 
 //end class

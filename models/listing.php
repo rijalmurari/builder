@@ -97,6 +97,7 @@ class PL_Listing {
 		}
 		return PL_Validate::attributes(PL_HTTP::send_request($config['request']['url'], $request), $config['returns']);
 	}
+	
 	public function types() {
 		$args = array( 'keys' => array( 'property_type') );
 		$config = PL_Config::PL_API_LISTINGS('get.types');
